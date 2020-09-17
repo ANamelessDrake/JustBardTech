@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  justbardtech.com -- SAM Application
+  Created by Justin Bard
+  08/25/2019
+
+  Developed to ease the process of setting up the enviornment needed for justbardtech.com
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: justbardtech
+  ProjectNameUpper:
+    Type: String
+    Default: JustBardTech
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues: 
+      - dev
+      - stage
+      - prod
+    Description: Enter Environment Name - Lowercase (i.e. dev)
+  EnvironmentNameUpper:
+    Type: String
+    Default: Dev
+    AllowedValues: 
+      - Dev
+      - Stage
+      - Prod
+    Description: Enter Environment Name - UpperCase (i.e. Dev)
+  EnvironmentStage:
+    Type: String
+    Default: Beta
+    Description: Enter Environment Stage Name
+  SLACKWEBHOOKURL:
+    Type: String
+    Description: Enter the Slack Webhook URL Required for Code Pipeline Notifications
+  SlackErrorHookURL:
+    Type: String
+    Description: Enter the Slack Webhook URL Required for Error Notifications
+  SLACKCHANNEL:
+    Type: String
+    Description: Enter the Code Pipeline Slack Channel Required to notify the proper slack channel
+  SLACKVERIFICATIONTOKEN:
+    Type: String
+    Default: zld8LpUs03wC7BiASyjULU4k
+    Description: Enter Slack Verification Token
+
+Conditions:
+  CreateProdResources: !Equals [ !Ref EnvironmentName, prod ]
+  CreateStageResources: !Equals [ !Ref EnvironmentName, stage ]
+  CreateDevResources: !Equals [ !Ref EnvironmentName, dev ]
+  NotStageResource: !Not [!Equals [!Ref EnvironmentName, stage]]
+  NotDevResource: !Not [!Equals [!Ref EnvironmentName, dev]]
+  NotProdResource: !Not [!Equals [!Ref EnvironmentName, prod]]
+
+Resources:
+###################################################################################################
+########################################### S3 Buckets ############################################
+###################################################################################################
+
+  JustBardTechS3BaseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        !If
+          - CreateProdResources
+          - "justbardtech.com"
+          - !Join
+            - ''
+            - - !Ref EnvironmentName
+              - ".justbardtech.com"
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders: ['*']
+          AllowedMethods: [GET, POST, PUT]
+          AllowedOrigins: ['*']
+    DeletionPolicy: Retain      
+
+
+###################################################################################################
+########################################## IAM Policies ###########################################
+###################################################################################################
+  JustBardTechS3BaseBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn:
+      - JustBardTechS3BaseBucket
+    Properties:
+      PolicyDocument:
+        Id: PublicS3Policy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref JustBardTechS3BaseBucket
+                - /*
+      Bucket: !Ref JustBardTechS3BaseBucket
+
+
+
+###################################################################################################
+############################################ Route 53 #############################################
+###################################################################################################
+  JustBardTechS3BaseBucketARecord:
+    Type: AWS::Route53::RecordSet
+    Condition: NotProdResource
+    Properties:
+      HostedZoneId: Z03607973N3OIPMBBT1GW
+      Name: "justbardtech.com"
+      AliasTarget:
+        DNSName: d2e39cv0feo4is.cloudfront.net
+        HostedZoneId: Z2FDTNDATAQYW2
+      Type: A
+
+  JustBardTechS3ProdBaseBucketARecord:
+    Type: AWS::Route53::RecordSet
+    Condition: CreateProdResources
+    Properties:
+      HostedZoneId: Z03607973N3OIPMBBT1GW
+      Name: "justbardtech.com"
+      AliasTarget:
+        DNSName: !Sub s3-website-${AWS::Region}.amazonaws.com
+        HostedZoneId: !If
+          - CreateProdResources
+          - "Z3AQBSTGFYJSTF"
+          - "Z3BJ6K6RIION7M"
+      Type: A
+
+  JustBardTechS3NonProdBaseBucketARecord:
+    Type: AWS::Route53::RecordSet
+    Condition: NotProdResource
+    Properties:
+      HostedZoneId: Z03607973N3OIPMBBT1GW
+      Name: !Join
+            - ''
+            - - !Ref EnvironmentName
+              - ".justbardtech.com"
+      AliasTarget:
+        DNSName: !Sub s3-website-${AWS::Region}.amazonaws.com
+        HostedZoneId: !If
+          - CreateProdResources
+          - "Z3AQBSTGFYJSTF"
+          - "Z3BJ6K6RIION7M"
+      Type: A
+
+###################################################################################################
+############################################# Outputs #############################################
+###################################################################################################

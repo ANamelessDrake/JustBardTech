@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "prod-justbardtech-sam"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1qeyyfdy79w0v"
+s3_prefix = "prod-justbardtech-sam"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "ProjectName=\"justbardtech\" ProjectNameUpper=\"JustBardTech\" EnvironmentName=\"prod\" EnvironmentNameUpper=\"Prod\" EnvironmentStage=\"v1\" SLACKWEBHOOKURL=\"na\" SlackErrorHookURL=\"na\" SLACKCHANNEL=\"na\" SLACKVERIFICATIONTOKEN=\"na\""

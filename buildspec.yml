@@ -1,0 +1,11 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+artifacts:
+  files:
+    - '**/*'
+  name: myname-$(date +%Y-%m-%d)
+  base-directory: 'HTML/universal'
+  discard-paths: no
