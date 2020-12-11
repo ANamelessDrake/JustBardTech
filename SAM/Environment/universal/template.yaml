@@ -117,17 +117,6 @@ Resources:
 ###################################################################################################
 ############################################ Route 53 #############################################
 ###################################################################################################
-  JustBardTechS3BaseBucketARecord:
-    Type: AWS::Route53::RecordSet
-    Condition: NotProdResource
-    Properties:
-      HostedZoneId: Z03607973N3OIPMBBT1GW
-      Name: "justbardtech.com"
-      AliasTarget:
-        DNSName: d2e39cv0feo4is.cloudfront.net
-        HostedZoneId: Z2FDTNDATAQYW2
-      Type: A
-
   JustBardTechS3ProdBaseBucketARecord:
     Type: AWS::Route53::RecordSet
     Condition: CreateProdResources
