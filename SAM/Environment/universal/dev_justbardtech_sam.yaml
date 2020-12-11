@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'justbardtech.com -- SAM Application Created by Justin Bard 08/25/2019
+
+  Developed to ease the process of setting up the enviornment needed for justbardtech.com
+
+  '
+Globals:
+  Function:
+    Timeout: 3
+Parameters:
+  ProjectName:
+    Type: String
+    Default: justbardtech
+  ProjectNameUpper:
+    Type: String
+    Default: JustBardTech
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - stage
+    - prod
+    Description: Enter Environment Name - Lowercase (i.e. dev)
+  EnvironmentNameUpper:
+    Type: String
+    Default: Dev
+    AllowedValues:
+    - Dev
+    - Stage
+    - Prod
+    Description: Enter Environment Name - UpperCase (i.e. Dev)
+  EnvironmentStage:
+    Type: String
+    Default: Beta
+    Description: Enter Environment Stage Name
+  SLACKWEBHOOKURL:
+    Type: String
+    Description: Enter the Slack Webhook URL Required for Code Pipeline Notifications
+  SlackErrorHookURL:
+    Type: String
+    Description: Enter the Slack Webhook URL Required for Error Notifications
+  SLACKCHANNEL:
+    Type: String
+    Description: Enter the Code Pipeline Slack Channel Required to notify the proper
+      slack channel
+  SLACKVERIFICATIONTOKEN:
+    Type: String
+    Default: zld8LpUs03wC7BiASyjULU4k
+    Description: Enter Slack Verification Token
+Conditions:
+  CreateProdResources:
+    Fn::Equals:
+    - Ref: EnvironmentName
+    - prod
+  CreateStageResources:
+    Fn::Equals:
+    - Ref: EnvironmentName
+    - stage
+  CreateDevResources:
+    Fn::Equals:
+    - Ref: EnvironmentName
+    - dev
+  NotStageResource:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: EnvironmentName
+      - stage
+  NotDevResource:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: EnvironmentName
+      - dev
+  NotProdResource:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: EnvironmentName
+      - prod
+Resources:
+  JustBardTechS3BaseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::If:
+        - CreateProdResources
+        - justbardtech.com
+        - Fn::Join:
+          - ''
+          - - Ref: EnvironmentName
+            - .justbardtech.com
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders:
+          - '*'
+          AllowedMethods:
+          - GET
+          - POST
+          - PUT
+          AllowedOrigins:
+          - '*'
+    DeletionPolicy: Retain
+  JustBardTechS3BaseBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn:
+    - JustBardTechS3BaseBucket
+    Properties:
+      PolicyDocument:
+        Id: PublicS3Policy
+        Version: 2012-10-17
+        Statement:
+        - Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Ref: JustBardTechS3BaseBucket
+              - /*
+      Bucket:
+        Ref: JustBardTechS3BaseBucket
+  JustBardTechS3ProdBaseBucketARecord:
+    Type: AWS::Route53::RecordSet
+    Condition: CreateProdResources
+    Properties:
+      HostedZoneId: Z03607973N3OIPMBBT1GW
+      Name: justbardtech.com
+      AliasTarget:
+        DNSName:
+          Fn::Sub: s3-website-${AWS::Region}.amazonaws.com
+        HostedZoneId:
+          Fn::If:
+          - CreateProdResources
+          - Z3AQBSTGFYJSTF
+          - Z3BJ6K6RIION7M
+      Type: A
+  JustBardTechS3NonProdBaseBucketARecord:
+    Type: AWS::Route53::RecordSet
+    Condition: NotProdResource
+    Properties:
+      HostedZoneId: Z03607973N3OIPMBBT1GW
+      Name:
+        Fn::Join:
+        - ''
+        - - Ref: EnvironmentName
+          - .justbardtech.com
+      AliasTarget:
+        DNSName:
+          Fn::Sub: s3-website-${AWS::Region}.amazonaws.com
+        HostedZoneId:
+          Fn::If:
+          - CreateProdResources
+          - Z3AQBSTGFYJSTF
+          - Z3BJ6K6RIION7M
+      Type: A
